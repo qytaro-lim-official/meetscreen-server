@@ -23,23 +23,42 @@ function send(socket, data) {
     }
 }
 
+//==================================================
+// ROOM ID GENERATOR
+// Format: NNNN X N DD YYYY
+// Example: 7294X8072026
+//==================================================
+
 function generateRoomId() {
-    const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
     let id;
 
     do {
-        id = "";
+        const randomNumbers =
+            crypto.randomInt(0, 10000).toString().padStart(4, "0");
 
-        for (let i = 0; i < 6; i++) {
-            id += characters[
-                Math.floor(Math.random() * characters.length)
-            ];
-        }
+        const randomLetter =
+            letters[crypto.randomInt(0, letters.length)];
+
+        const randomDigit =
+            crypto.randomInt(0, 10).toString();
+
+        const now = new Date();
+
+        const day = now.getUTCDate().toString().padStart(2, "0");
+        const year = now.getUTCFullYear().toString();
+
+        id = randomNumbers + randomLetter + randomDigit + day + year;
+
     } while (rooms.has(id));
 
     return id;
 }
+
+//==================================================
+// PARTICIPANTS
+//==================================================
 
 function getParticipants(room) {
     return Array.from(room.participants.values()).map(player => ({
@@ -60,6 +79,10 @@ function updateParticipants(room) {
     }
 }
 
+//==================================================
+// LEAVE ROOM
+//==================================================
+
 function leaveRoom(socket) {
     if (!socket.roomId) return;
 
@@ -68,14 +91,23 @@ function leaveRoom(socket) {
     if (room) {
         room.participants.delete(socket.playerId);
 
+        // Delete room when the last participant leaves.
+        // Its ID becomes available again.
+
         if (room.participants.size === 0) {
             rooms.delete(socket.roomId);
+
+            console.log("Room deleted:", socket.roomId);
         } else {
+            // Transfer host rights if the host leaves.
+
             if (room.hostId === socket.playerId) {
                 const newHost = room.participants.values().next().value;
 
                 room.hostId = newHost.id;
                 newHost.is_host = true;
+
+                console.log("New host:", newHost.name);
             }
 
             updateParticipants(room);
@@ -85,6 +117,10 @@ function leaveRoom(socket) {
     socket.roomId = null;
     socket.playerId = null;
 }
+
+//==================================================
+// WEBSOCKET CONNECTION
+//==================================================
 
 wss.on("connection", socket => {
     socket.roomId = null;
@@ -115,6 +151,10 @@ wss.on("connection", socket => {
             });
             return;
         }
+
+        //==================================================
+        // CREATE ROOM
+        //==================================================
 
         if (data.type === "create_room") {
             if (socket.roomId) {
@@ -156,6 +196,8 @@ wss.on("connection", socket => {
             socket.roomId = roomId;
             socket.playerId = playerId;
 
+            console.log("Room created:", roomId);
+
             send(socket, {
                 type: "room_created",
                 room_id: roomId,
@@ -166,6 +208,10 @@ wss.on("connection", socket => {
             updateParticipants(room);
             return;
         }
+
+        //==================================================
+        // JOIN ROOM
+        //==================================================
 
         if (data.type === "join_room") {
             if (socket.roomId) {
@@ -224,6 +270,10 @@ wss.on("connection", socket => {
             return;
         }
 
+        //==================================================
+        // LEAVE ROOM
+        //==================================================
+
         if (data.type === "leave_room") {
             leaveRoom(socket);
 
@@ -240,6 +290,10 @@ wss.on("connection", socket => {
         });
     });
 
+    //==================================================
+    // DISCONNECT
+    //==================================================
+
     socket.on("close", () => {
         leaveRoom(socket);
     });
@@ -249,6 +303,10 @@ wss.on("connection", socket => {
         leaveRoom(socket);
     });
 });
+
+//==================================================
+// START SERVER
+//==================================================
 
 server.listen(PORT, "0.0.0.0", () => {
     console.log(`MeetScreen server running on port ${PORT}`);
