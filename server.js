@@ -13,7 +13,11 @@ const server = http.createServer((req, res) => {
     }));
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+    server,
+    maxPayload: 1024 * 1024
+});
+
 const rooms = new Map();
 
 //==================================================
@@ -183,6 +187,111 @@ function broadcastParticipantState(room, player) {
     for (const participant of room.participants.values()) {
         send(participant.socket, message);
     }
+}
+
+//==================================================
+// WEBRTC SIGNALING
+//==================================================
+
+function relayWebRTCSignal(socket, data) {
+    if (!socket.roomId || !socket.playerId) {
+        sendError(socket, "You are not in a room");
+        return;
+    }
+
+    const room = rooms.get(socket.roomId);
+
+    if (!room) {
+        sendError(socket, "Room not found");
+        return;
+    }
+
+    const sender = room.participants.get(socket.playerId);
+
+    if (!sender || sender.socket !== socket) {
+        sendError(socket, "Invalid signal sender");
+        return;
+    }
+
+    const targetId = String(data.target_id || "");
+
+    if (!targetId || targetId === socket.playerId) {
+        sendError(socket, "Invalid signal target");
+        return;
+    }
+
+    const target = room.participants.get(targetId);
+
+    if (!target || target.socket.readyState !== WebSocket.OPEN) {
+        sendError(socket, "Signal recipient is unavailable");
+        return;
+    }
+
+    const signal = data.signal;
+
+    if (
+        !signal ||
+        typeof signal !== "object" ||
+        Array.isArray(signal)
+    ) {
+        sendError(socket, "Invalid WebRTC signal");
+        return;
+    }
+
+    const allowedTypes = [
+        "offer",
+        "answer",
+        "candidate"
+    ];
+
+    if (!allowedTypes.includes(signal.type)) {
+        sendError(socket, "Unsupported WebRTC signal type");
+        return;
+    }
+
+    let signalSize;
+
+    try {
+        signalSize = JSON.stringify(signal).length;
+    } catch {
+        sendError(socket, "Invalid WebRTC signal");
+        return;
+    }
+
+    if (signalSize > 64 * 1024) {
+        sendError(socket, "WebRTC signal is too large");
+        return;
+    }
+
+    if (
+        (signal.type === "offer" || signal.type === "answer") &&
+        (
+            typeof signal.sdp !== "string" ||
+            signal.sdp.length === 0
+        )
+    ) {
+        sendError(socket, "Invalid WebRTC description");
+        return;
+    }
+
+    if (
+        signal.type === "candidate" &&
+        signal.candidate !== null &&
+        (
+            !signal.candidate ||
+            typeof signal.candidate !== "object" ||
+            typeof signal.candidate.candidate !== "string"
+        )
+    ) {
+        sendError(socket, "Invalid ICE candidate");
+        return;
+    }
+
+    send(target.socket, {
+        type: "webrtc_signal",
+        from_id: sender.id,
+        signal
+    });
 }
 
 //==================================================
@@ -628,6 +737,15 @@ wss.on("connection", socket => {
 
             broadcastParticipantState(room, player);
 
+            return;
+        }
+
+        //==================================================
+        // WEBRTC SIGNAL RELAY
+        //==================================================
+
+        if (data.type === "webrtc_signal") {
+            relayWebRTCSignal(socket, data);
             return;
         }
 
