@@ -4,30 +4,43 @@ name: Build MeetScreen for Windows
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Build Windows Installer
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout
+      - name: Download source code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install --verbose
-
-      - name: Build Windows
-        run: npm run build:win -- --publish never
+        run: npm ci --no-audit --no-fund
         env:
-          DEBUG: electron-builder
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
 
-      - name: Upload EXE
+      - name: Verify Electron installation
+        run: npx electron --version
+
+      - name: Build MeetScreen for Windows
+        run: npx electron-builder --win nsis --x64 --publish never
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
+
+      - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
           path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 7
