@@ -28,6 +28,23 @@ jobs:
       - name: Verify Electron
         run: npx electron --version
 
+      - name: Diagnose npm workspace command
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          Write-Host "=== NPM VERSION ==="
+          npm --version
+
+          Write-Host "=== NPM PREFIX ==="
+          npm prefix
+
+          Write-Host "=== NPM PREFIX WORKSPACE ==="
+          npm prefix -w
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "npm prefix -w failed"
+          }
+
       - name: Build Windows Installer
         run: npx electron-builder --win nsis --x64 --publish never
         env:
