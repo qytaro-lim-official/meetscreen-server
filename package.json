@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "start:server": "node server.js",
-    "build:win": "electron-builder --win",
+    "build:win": "electron-builder --win --publish never",
     "build:linux": "electron-builder --linux AppImage --publish never"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
   "build": {
     "appId": "com.meetscreen.app",
     "productName": "MeetScreen",
+    "npmRebuild": false,
     "directories": {
       "output": "dist"
     },
@@ -33,7 +34,10 @@
     ],
     "linux": {
       "category": "Network",
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     },
     "win": {
       "target": "nsis"
