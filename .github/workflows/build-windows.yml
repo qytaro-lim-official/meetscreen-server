@@ -103,6 +103,11 @@ jobs:
           npm.cmd prefix -w
           Write-Host "Exit code: $LASTEXITCODE"
 
+          Write-Host "========== DIAGNOSTICS COMPLETE =========="
+          Write-Host "Continuing to Windows build..."
+
+          exit 0
+
       # ==========================================
       # BUILD WITH DIAGNOSTICS
       # ==========================================
@@ -111,8 +116,6 @@ jobs:
         shell: pwsh
         timeout-minutes: 15
         run: |
-          $ErrorActionPreference = "Continue"
-
           $env:DEBUG = "electron-builder,electron-builder:*"
           $env:npm_config_loglevel = "verbose"
           $env:ELECTRON_CACHE = "$env:RUNNER_TEMP/electron-cache"
@@ -133,7 +136,7 @@ jobs:
           }
 
       # ==========================================
-      # UPLOAD BUILD LOG
+      # UPLOAD DIAGNOSTIC LOG
       # ==========================================
 
       - name: Upload diagnostic log
@@ -149,7 +152,7 @@ jobs:
       # UPLOAD WINDOWS INSTALLER
       # ==========================================
 
-      - name: Upload Windows installer
+      - name: UPLOAD WINDOWS INSTALLER
         if: success()
         uses: actions/upload-artifact@v4
         with:
