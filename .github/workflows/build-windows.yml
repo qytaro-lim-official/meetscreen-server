@@ -123,7 +123,7 @@ jobs:
 
           Write-Host "========== STARTING WINDOWS BUILD =========="
 
-          npm run build:win -- --debug 2>&1 |
+          npm run build:win 2>&1 |
             Tee-Object -FilePath build-diagnostic.log
 
           $buildExitCode = $LASTEXITCODE
@@ -152,7 +152,7 @@ jobs:
       # UPLOAD WINDOWS INSTALLER
       # ==========================================
 
-      - name: UPLOAD WINDOWS INSTALLER
+      - name: Upload Windows installer
         if: success()
         uses: actions/upload-artifact@v4
         with:
