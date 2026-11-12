@@ -31,6 +31,7 @@ jobs:
       - name: Build Windows Installer
         run: npx electron-builder --win nsis --x64 --publish never
         env:
+          DEBUG: electron-builder
           ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
