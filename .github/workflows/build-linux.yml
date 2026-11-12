@@ -7,9 +7,14 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Build MeetScreen for Linux
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Download project
@@ -19,6 +24,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Show Node and npm versions
+        run: |
+          echo "=== NODE VERSION ==="
+          node --version
+
+          echo "=== NPM VERSION ==="
+          npm --version
 
       - name: Install dependencies
         run: npm install --ignore-scripts=false
@@ -34,3 +47,4 @@ jobs:
             dist/*.AppImage
             dist/*.deb
           if-no-files-found: error
+          retention-days: 7
