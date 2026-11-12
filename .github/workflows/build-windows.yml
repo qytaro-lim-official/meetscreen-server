@@ -14,7 +14,7 @@ jobs:
   build:
     name: Build MeetScreen EXE
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
 
     steps:
       - name: Checkout project
@@ -28,28 +28,24 @@ jobs:
             electronuserland/builder:wine \
             /bin/bash -lc '
               set -e
-
-              echo "================================"
-              echo "Installing MeetScreen dependencies"
-              echo "================================"
-
               npm install --no-audit --no-fund
-
-              echo "================================"
-              echo "Building Windows installer"
-              echo "================================"
-
-              npm run build:win
-
-              echo "================================"
-              echo "Build completed"
-              echo "================================"
+              npx electron-builder --win --dir --publish never
             '
 
-      - name: Upload Windows installer
+      - name: Verify Windows executable
+        run: |
+          test -f dist/win-unpacked/MeetScreen.exe
+          echo "MeetScreen.exe successfully created!"
+
+      - name: Create ZIP archive
+        run: |
+          cd dist
+          zip -r "$GITHUB_WORKSPACE/MeetScreen-Windows.zip" win-unpacked
+
+      - name: Upload Windows application
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
-          path: dist/*.exe
+          path: MeetScreen-Windows.zip
           if-no-files-found: error
           retention-days: 14
