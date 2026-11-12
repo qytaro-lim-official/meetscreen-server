@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -18,10 +19,12 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --verbose
 
       - name: Build Windows
         run: npm run build:win -- --publish never
+        env:
+          DEBUG: electron-builder
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
