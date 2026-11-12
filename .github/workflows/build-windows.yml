@@ -3,157 +3,32 @@ name: Build MeetScreen for Windows
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build MeetScreen for Windows
-    runs-on: windows-latest
-    timeout-minutes: 25
+    name: Build Windows EXE on Ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
-      # ==========================================
-      # DOWNLOAD PROJECT
-      # ==========================================
-
       - name: Download project
         uses: actions/checkout@v4
 
-      # ==========================================
-      # SETUP NODE.JS
-      # ==========================================
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      # ==========================================
-      # ENVIRONMENT INFORMATION
-      # ==========================================
-
-      - name: Show environment information
-        shell: pwsh
+      - name: Build Windows EXE using Wine
         run: |
-          Write-Host "========== NODE VERSION =========="
-          node --version
-
-          Write-Host "========== NPM VERSION =========="
-          npm --version
-
-          Write-Host "========== NODE PATH =========="
-          where.exe node
-
-          Write-Host "========== NPM PATH =========="
-          where.exe npm
-
-          Write-Host "========== PROJECT PATH =========="
-          Get-Location
-
-          Write-Host "========== TEMP PATH =========="
-          Write-Host $env:TEMP
-
-      # ==========================================
-      # INSTALL DEPENDENCIES
-      # ==========================================
-
-      - name: Install dependencies
-        shell: pwsh
-        run: |
-          npm install --ignore-scripts=false --verbose
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Dependency installation failed. Exit code: $LASTEXITCODE"
-          }
-
-      # ==========================================
-      # VERIFY ELECTRON
-      # ==========================================
-
-      - name: Verify Electron
-        shell: pwsh
-        run: |
-          npx electron --version
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Electron verification failed."
-          }
-
-      # ==========================================
-      # DIAGNOSE NPM
-      # ==========================================
-
-      - name: Diagnose npm prefix
-        shell: pwsh
-        run: |
-          Write-Host "========== NPM PREFIX =========="
-
-          npm prefix
-          Write-Host "Exit code: $LASTEXITCODE"
-
-          Write-Host "========== NPM PREFIX WORKSPACE =========="
-
-          npm prefix -w
-          Write-Host "Exit code: $LASTEXITCODE"
-
-          Write-Host "========== NPM.CMD PREFIX WORKSPACE =========="
-
-          npm.cmd prefix -w
-          Write-Host "Exit code: $LASTEXITCODE"
-
-          Write-Host "========== DIAGNOSTICS COMPLETE =========="
-          Write-Host "Continuing to Windows build..."
-
-          exit 0
-
-      # ==========================================
-      # BUILD WITH DIAGNOSTICS
-      # ==========================================
-
-      - name: Build Windows app with diagnostics
-        shell: pwsh
-        timeout-minutes: 15
-        run: |
-          $env:DEBUG = "electron-builder,electron-builder:*"
-          $env:npm_config_loglevel = "verbose"
-          $env:ELECTRON_CACHE = "$env:RUNNER_TEMP/electron-cache"
-          $env:ELECTRON_BUILDER_CACHE = "$env:RUNNER_TEMP/electron-builder-cache"
-
-          Write-Host "========== STARTING WINDOWS BUILD =========="
-
-          npm run build:win 2>&1 |
-            Tee-Object -FilePath build-diagnostic.log
-
-          $buildExitCode = $LASTEXITCODE
-
-          Write-Host "========== BUILD EXIT CODE =========="
-          Write-Host $buildExitCode
-
-          if ($buildExitCode -ne 0) {
-            exit $buildExitCode
-          }
-
-      # ==========================================
-      # UPLOAD DIAGNOSTIC LOG
-      # ==========================================
-
-      - name: Upload diagnostic log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MeetScreen-Windows-Diagnostic
-          path: build-diagnostic.log
-          if-no-files-found: warn
-          retention-days: 7
-
-      # ==========================================
-      # UPLOAD WINDOWS INSTALLER
-      # ==========================================
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/project" \
+            -w /project \
+            electronuserland/builder:wine \
+            /bin/bash -lc "npm ci && npm run build:win"
 
       - name: Upload Windows installer
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
