@@ -9,71 +9,42 @@ permissions:
 
 jobs:
   build:
-    name: Build MeetScreen Installer
+    name: Build MeetScreen for Windows
     runs-on: windows-latest
     timeout-minutes: 45
 
     steps:
-      - name: Checkout repository
+      - name: Download project
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - name: Show environment
-        shell: pwsh
+      - name: Show versions
         run: |
           node --version
           npm --version
-          Write-Host "Project directory:"
-          Get-Location
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --ignore-scripts=false
 
-      - name: Verify installed packages
-        shell: pwsh
-        run: |
-          npm ls electron electron-builder ws
+      - name: Verify Electron
+        run: npx electron --version
 
-      - name: Verify application files
-        shell: pwsh
-        run: |
-          $files = @(
-            "package.json",
-            "main.js",
-            "index.html",
-            "renderer.js",
-            "Script.js",
-            "Style.css",
-            "MeetNetwork.js"
-          )
-
-          foreach ($file in $files) {
-            if (Test-Path $file) {
-              Write-Host "FOUND: $file"
-            } else {
-              Write-Host "NOT FOUND: $file"
-            }
-          }
-
-      - name: Build Windows Installer
-        shell: pwsh
-        run: |
-          $env:DEBUG = "electron-builder"
-          npx electron-builder --win nsis --x64 --publish never
-
+      - name: Build Windows app
+        run: npm run build:win
         env:
+          DEBUG: electron-builder
           ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
-      - name: Upload Windows Installer
+      - name: Upload Windows builds
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
-          path: dist/*.exe
+          path: |
+            dist/*.exe
           if-no-files-found: error
           retention-days: 7
