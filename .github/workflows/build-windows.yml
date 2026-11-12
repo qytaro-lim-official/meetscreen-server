@@ -12,21 +12,39 @@ permissions:
 
 jobs:
   build:
-    name: Build Windows EXE on Ubuntu
+    name: Build MeetScreen EXE
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
 
     steps:
-      - name: Download project
+      - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Build Windows EXE using Wine
+      - name: Build Windows application
         run: |
           docker run --rm \
-            -v "$GITHUB_WORKSPACE:/project" \
+            -v "${GITHUB_WORKSPACE}:/project" \
             -w /project \
             electronuserland/builder:wine \
-            /bin/bash -lc "npm ci && npm run build:win"
+            /bin/bash -lc '
+              set -e
+
+              echo "================================"
+              echo "Installing MeetScreen dependencies"
+              echo "================================"
+
+              npm install --no-audit --no-fund
+
+              echo "================================"
+              echo "Building Windows installer"
+              echo "================================"
+
+              npm run build:win
+
+              echo "================================"
+              echo "Build completed"
+              echo "================================"
+            '
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
@@ -34,4 +52,4 @@ jobs:
           name: MeetScreen-Windows
           path: dist/*.exe
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
