@@ -1,5 +1,5 @@
 
-import MeetNetwork from "../MeetNetwork.js";
+const MeetNetwork = window.MeetNetwork;
 
 // ==================================================
 // MEETSCREEN — ELECTRON CLIENT

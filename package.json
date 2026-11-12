@@ -2,18 +2,16 @@
 {
   "name": "meetscreen",
   "version": "1.0.0",
-  "description": "MeetScreen desktop video meeting app and WebSocket server",
+  "description": "MeetScreen desktop video meeting app",
   "main": "main.js",
   "author": "MeetScreen",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "start:server": "node server.js",
-    "build:win": "electron-builder --win --publish never",
-    "build:linux": "electron-builder --linux AppImage --publish never"
-  },
-  "dependencies": {
-    "ws": "^8.18.0"
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux AppImage deb",
+    "build:linux:appimage": "electron-builder --linux AppImage",
+    "build:linux:deb": "electron-builder --linux deb"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -22,15 +20,13 @@
   "build": {
     "appId": "com.meetscreen.app",
     "productName": "MeetScreen",
-    "npmRebuild": false,
     "directories": {
       "output": "dist"
     },
     "files": [
       "**/*",
       "!dist/**/*",
-      "!node_modules/.cache/**/*",
-      "!server.js"
+      "!node_modules/.cache/**/*"
     ],
     "linux": {
       "category": "Network",

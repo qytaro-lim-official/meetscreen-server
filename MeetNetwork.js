@@ -449,4 +449,4 @@ class MeetNetwork {
     }
 }
 
-export default MeetNetwork;
+window.MeetNetwork = MeetNetwork;

@@ -1,6 +1,14 @@
 
 const { app, BrowserWindow, session } = require("electron");
 const path = require("path");
+const fs = require("fs");
+
+// ==================================================
+// CONFIGURATION
+// ==================================================
+
+const APP_TITLE = "MeetScreen";
+const APP_BACKGROUND = "#111318";
 
 // ==================================================
 // MEDIA PERMISSIONS
@@ -9,7 +17,6 @@ const path = require("path");
 function setupMediaPermissions() {
     const appSession = session.defaultSession;
 
-    // Check media permissions
     appSession.setPermissionCheckHandler(
         (webContents, permission, requestingOrigin, details) => {
             if (permission !== "media") {
@@ -22,15 +29,13 @@ function setupMediaPermissions() {
 
             const mediaType = details?.mediaType;
 
-            const isAllowedMedia =
-                mediaType === "audio" ||
-                mediaType === "video";
-
-            return isAppPage && isAllowedMedia;
+            return (
+                isAppPage &&
+                (mediaType === "audio" || mediaType === "video")
+            );
         }
     );
 
-    // Grant camera and microphone access
     appSession.setPermissionRequestHandler(
         (webContents, permission, callback, details) => {
             const isAppPage =
@@ -39,47 +44,70 @@ function setupMediaPermissions() {
 
             const mediaTypes = details?.mediaTypes || [];
 
-            const hasValidMediaTypes =
+            const validMedia =
                 mediaTypes.length > 0 &&
                 mediaTypes.every(type =>
                     type === "audio" || type === "video"
                 );
 
-            const canUseMedia =
+            callback(
                 permission === "media" &&
                 isAppPage &&
-                hasValidMediaTypes;
-
-            callback(canUseMedia);
+                validMedia
+            );
         }
     );
 }
 
 // ==================================================
-// WINDOW
+// CREATE WINDOW
 // ==================================================
 
 function createWindow() {
+    const indexPath = path.join(__dirname, "index.html");
+
+    if (!fs.existsSync(indexPath)) {
+        console.error("MeetScreen: index.html not found!");
+        console.error("Expected path:", indexPath);
+        app.quit();
+        return;
+    }
+
     const mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
+
         minWidth: 900,
         minHeight: 600,
-        title: "MeetScreen",
-        backgroundColor: "#111318",
+
+        title: APP_TITLE,
+        backgroundColor: APP_BACKGROUND,
         autoHideMenuBar: true,
 
         webPreferences: {
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            sandbox: true
         }
     });
 
     mainWindow.removeMenu();
 
-    mainWindow.loadFile(
-        path.join(__dirname, "webrtc", "src", "index.html")
-    );
+    mainWindow.loadFile(indexPath);
+
+    mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+        console.error(
+            "MeetScreen loading error:",
+            errorCode,
+            errorDescription
+        );
+    });
+
+    mainWindow.on("closed", () => {
+        // Window closed
+    });
+
+    return mainWindow;
 }
 
 // ==================================================
@@ -97,6 +125,10 @@ app.whenReady().then(() => {
         }
     });
 });
+
+// ==================================================
+// QUIT
+// ==================================================
 
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
