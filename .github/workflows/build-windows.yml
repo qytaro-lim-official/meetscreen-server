@@ -9,50 +9,68 @@ permissions:
 
 jobs:
   build:
-    name: Build Windows Installer
+    name: Build MeetScreen Installer
     runs-on: windows-latest
     timeout-minutes: 45
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - name: Show environment
+        shell: pwsh
+        run: |
+          node --version
+          npm --version
+          Write-Host "Project directory:"
+          Get-Location
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Verify Electron
-        run: npx electron --version
-
-      - name: Diagnose npm workspace command
-        timeout-minutes: 2
+      - name: Verify installed packages
         shell: pwsh
         run: |
-          Write-Host "=== NPM VERSION ==="
-          npm --version
+          npm ls electron electron-builder ws
 
-          Write-Host "=== NPM PREFIX ==="
-          npm prefix
+      - name: Verify application files
+        shell: pwsh
+        run: |
+          $files = @(
+            "package.json",
+            "main.js",
+            "index.html",
+            "renderer.js",
+            "Script.js",
+            "Style.css",
+            "MeetNetwork.js"
+          )
 
-          Write-Host "=== NPM PREFIX WORKSPACE ==="
-          npm prefix -w
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "npm prefix -w failed"
+          foreach ($file in $files) {
+            if (Test-Path $file) {
+              Write-Host "FOUND: $file"
+            } else {
+              Write-Host "NOT FOUND: $file"
+            }
           }
 
       - name: Build Windows Installer
-        run: npx electron-builder --win nsis --x64 --publish never
+        shell: pwsh
+        run: |
+          $env:DEBUG = "electron-builder"
+          npx electron-builder --win nsis --x64 --publish never
+
         env:
-          DEBUG: electron-builder
           ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
-      - name: Upload EXE
+      - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
