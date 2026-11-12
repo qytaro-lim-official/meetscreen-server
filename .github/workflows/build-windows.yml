@@ -14,30 +14,27 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Download source code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-        env:
-          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
+        run: npm install --no-audit --no-fund
 
-      - name: Verify Electron installation
+      - name: Verify Electron
         run: npx electron --version
 
-      - name: Build MeetScreen for Windows
+      - name: Build Windows Installer
         run: npx electron-builder --win nsis --x64 --publish never
         env:
           ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
-      - name: Upload Windows Installer
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: MeetScreen-Windows
